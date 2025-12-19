@@ -1,0 +1,324 @@
+✅ SPRING BOOT CARS API (IN-MEMORY) — STEP BY STEP
+🟢 STEP 1: Create Spring Boot Project
+
+In Eclipse / IntelliJ
+
+Project Type: Maven
+
+Group Id: com.car
+
+Artifact Id: cars-api
+
+Packaging: jar
+
+Java: 17 / 21
+
+Dependencies (IMPORTANT)
+
+✔ Spring Web
+
+
+(You are using in-memory collection, so DB is NOT needed)
+
+🟢 STEP 2: Final Folder Structure (VERY IMPORTANT)
+src/main/java
+└── com
+    └── car
+        └── cars_api
+            ├── controller
+            │   └── CarController.java
+            ├── service
+            │   ├── CarService.java
+            │   └── CarServiceImpl.java
+            ├── repository
+            │   └── CarRepository.java
+            ├── model
+            │   └── Car.java
+            └── CarsApiApplication.java
+
+src/main/resources
+└── application.properties
+
+
+⚠️ All packages must be under com.car.cars_api
+Spring Boot scans from CarsApiApplication downward.
+
+🟢 STEP 3: application.properties
+
+📁 src/main/resources/application.properties
+
+spring.application.name=cars-api
+server.port=8989
+
+# Disable DB auto config (In-memory collection)
+spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+spring.jackson.serialization.indent_output=true
+
+
+✔ Correct
+✔ Clean
+✔ No database required
+
+🟢 STEP 4: Model Class
+
+📁 model/Car.java
+
+package com.car.cars_api.model;
+
+public class Car {
+
+    private int id;
+    private String make;
+    private String model;
+    private double price;
+    private int year;
+
+    public Car() {}
+
+    public Car(int id, String make, String model, double price, int year) {
+        this.id = id;
+        this.make = make;
+        this.model = model;
+        this.price = price;
+        this.year = year;
+    }
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public String getMake() { return make; }
+    public void setMake(String make) { this.make = make; }
+
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+
+    public double getPrice() { return price; }
+    public void setPrice(double price) { this.price = price; }
+
+    public int getYear() { return year; }
+    public void setYear(int year) { this.year = year; }
+}
+
+
+📌 Plain Java class (POJO)
+📌 No annotations needed
+
+🟢 STEP 5: Repository (In-Memory Storage)
+
+📁 repository/CarRepository.java
+
+package com.car.cars_api.repository;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Repository;
+import com.car.cars_api.model.Car;
+
+@Repository
+public class CarRepository {
+
+    private List<Car> cars = new ArrayList<>();
+
+    public CarRepository() {
+        cars.add(new Car(1, "Honda", "City", 800000, 2020));
+        cars.add(new Car(2, "Maruti", "Swift", 600000, 2019));
+        cars.add(new Car(3, "Hyundai", "Verna", 900000, 2021));
+        cars.add(new Car(4, "Honda", "Amaze", 700000, 2020));
+        cars.add(new Car(5, "Tata", "Nexon", 950000, 2022));
+    }
+
+    public List<Car> findAll() {
+        return cars;
+    }
+
+    public Car findById(int id) {
+        return cars.stream()
+                   .filter(c -> c.getId() == id)
+                   .findFirst()
+                   .orElse(null);
+    }
+
+    public void save(Car car) {
+        cars.add(car);
+    }
+
+    public void deleteByPriceRange(double min, double max) {
+        cars.removeIf(c -> c.getPrice() >= min && c.getPrice() <= max);
+    }
+
+    public List<Car> findByMakeAndYear(String make, int year) {
+        return cars.stream()
+                   .filter(c -> c.getMake().equalsIgnoreCase(make)
+                             && c.getYear() == year)
+                   .collect(Collectors.toList());
+    }
+
+    public Car updateByMake(String make, Car updatedCar) {
+        for (Car c : cars) {
+            if (c.getMake().equalsIgnoreCase(make)) {
+                c.setModel(updatedCar.getModel());
+                c.setPrice(updatedCar.getPrice());
+                c.setYear(updatedCar.getYear());
+                return c;
+            }
+        }
+        return null;
+    }
+}
+
+
+📌 Acts like a fake database
+📌 Uses ArrayList
+
+🟢 STEP 6: Service Interface
+
+📁 service/CarService.java
+
+package com.car.cars_api.service;
+
+import java.util.List;
+import com.car.cars_api.model.Car;
+
+public interface CarService {
+
+    List<Car> getAllCars();
+    Car getCarById(int id);
+    void deleteCarsByPriceRange(double min, double max);
+    List<Car> getCarsByMakeAndYear(String make, int year);
+    Car updateCarByMake(String make, Car car);
+    void addCar(Car car);
+}
+
+
+📌 Business contract
+
+🟢 STEP 7: Service Implementation
+
+📁 service/CarServiceImpl.java
+
+package com.car.cars_api.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.car.cars_api.model.Car;
+import com.car.cars_api.repository.CarRepository;
+
+@Service
+public class CarServiceImpl implements CarService {
+
+    @Autowired
+    private CarRepository repository;
+
+    public List<Car> getAllCars() {
+        return repository.findAll();
+    }
+
+    public Car getCarById(int id) {
+        return repository.findById(id);
+    }
+
+    public void deleteCarsByPriceRange(double min, double max) {
+        repository.deleteByPriceRange(min, max);
+    }
+
+    public List<Car> getCarsByMakeAndYear(String make, int year) {
+        return repository.findByMakeAndYear(make, year);
+    }
+
+    public Car updateCarByMake(String make, Car car) {
+        return repository.updateByMake(make, car);
+    }
+
+    public void addCar(Car car) {
+        repository.save(car);
+    }
+}
+
+🟢 STEP 8: Controller
+
+📁 controller/CarController.java
+
+package com.car.cars_api.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import com.car.cars_api.model.Car;
+import com.car.cars_api.service.CarService;
+
+@RestController
+@RequestMapping("/cars-api")
+public class CarController {
+
+    @Autowired
+    private CarService service;
+
+    // GET http://localhost:8989/cars-api
+    @GetMapping
+    public List<Car> getAllCars() {
+        return service.getAllCars();
+    }
+
+    // GET http://localhost:8989/cars-api/1
+    @GetMapping("/{id}")
+    public Car getCarById(@PathVariable int id) {
+        return service.getCarById(id);
+    }
+
+    // DELETE http://localhost:8989/cars-api/600000/800000
+    @DeleteMapping("/{minPrice}/{maxPrice}")
+    public String deleteByPriceRange(@PathVariable double minPrice,
+                                     @PathVariable double maxPrice) {
+        service.deleteCarsByPriceRange(minPrice, maxPrice);
+        return "Cars deleted successfully";
+    }
+
+    // GET http://localhost:8989/cars-api/Honda/2020
+    @GetMapping("/{make}/{year}")
+    public List<Car> getCarsByMakeAndYear(@PathVariable String make,
+                                          @PathVariable int year) {
+        return service.getCarsByMakeAndYear(make, year);
+    }
+
+    // PUT http://localhost:8989/cars-api/Honda
+    @PutMapping("/{make}")
+    public Car updateCar(@PathVariable String make,
+                          @RequestBody Car car) {
+        return service.updateCarByMake(make, car);
+    }
+
+    // POST http://localhost:8989/cars-api
+    @PostMapping
+    public String addCar(@RequestBody Car car) {
+        service.addCar(car);
+        return "Car added successfully";
+    }
+}
+
+
+📌 Base path used → /cars-api
+📌 Clean & consistent URLs (fixed typo from /car-api)
+
+🟢 STEP 9: Main Class
+
+📁 CarsApiApplication.java
+
+package com.car.cars_api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class CarsApiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(CarsApiApplication.class, args);
+    }
+}
